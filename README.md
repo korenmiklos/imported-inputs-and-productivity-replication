@@ -1,6 +1,6 @@
 Replication code for 
 
-	Halpern, László, Miklós Koren and Ádám Szeidl. 2015. "Imported Inputs and Productivity." American Economic Review.
+> Halpern, László, Miklós Koren and Ádám Szeidl. 2015. "Imported Inputs and Productivity." American Economic Review.
 
 Please cite the above paper when using any of these programs.
 
@@ -16,9 +16,14 @@ make all
 ```
 You may need to edit the Makefile to call the appropriate Stata executable (`stata-se` in our case).
 
+The different specifications and bootstrap repetitions can run in parallel. For parallel execution, use the `-j` option with `make`, giving the maximum number of jobs you want to run in parallel:
+```
+make -j3 all
+```
+
 Workflow
 ========
-All the data processing and estimation scripts are under the folder `code/`. The other folder are placeholders for the necessary inputs and outputs of these scripts. For example, data is read from `data/` (please see the note on data access below), intermediate simulation results are saved under `doc/simulations`, whereas graphs are saved under `text/graphs`.
+All the data processing and estimation scripts are under the folder `code/`. The other folders are placeholders for the necessary inputs and outputs of these scripts. For example, data is read from `data/` (please see the note on data access below), intermediate simulation results are saved under `doc/simulations`, whereas graphs are saved under `text/graphs`. We include all the output files in this package.
 
 The estimation workflow consists of the following broad steps. The Makefile contains all the dependencies fully describing the workflow.
 
@@ -34,9 +39,9 @@ The estimation workflow consists of the following broad steps. The Makefile cont
 Data access
 ===========
 Our estimates are based on a panel dataset of import transactions, balance sheets and earnings statements of Hungarian firms for the period 1992 to 2003. The “IEHAS-CeFiG Hungary” dataset is described in detail in 
-```
-Békés, Gábor, Balázs Muraközy, and Péter Harasztosi. 2011. “Firms and Products in International Trade: Evidence from Hungary.” Economic Systems Research 35 (1): 4–24.
-```
+
+> Békés, Gábor, Balázs Muraközy, and Péter Harasztosi. 2011. “Firms and Products in International Trade: Evidence from Hungary.” Economic Systems Research 35 (1): 4–24.
+
 Because the data is confidential, we cannot make it available in this replication package.
 
-Researchers interested in replicating our results with this same data, or conducting other academic research on this data, can access the dataset and the necessary data processing scripts at the premises of the Institute of Economics of the Hungarian Academy of Sciences. Please refer to http://www.mtakti.hu/english/ or contact the corresponding author, Miklos Koren at korenm@ceu.edu.
+Researchers interested in replicating our results with this same data, or conducting other academic research on this data, can access the dataset and the necessary data processing scripts at the premises of the Institute of Economics of the Hungarian Academy of Sciences. Please refer to http://www.mtakti.hu/english/ or contact the corresponding author, Miklos Koren at korenm at ceu dot edu.
