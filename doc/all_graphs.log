@@ -1,0 +1,1151 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /home/koren/projects/prod-AER-replicarion-package/code/../doc/all_
+> graphs.log
+  log type:  text
+ opened on:   4 Jul 2015, 16:52:57
+
+. 
+. local options scheme(white)
+
+. local format pdf, dropeps replace
+
+. 
+. do load_specification table3_baseline 0
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Load the parameters estimated in a given specification, e.g.
+> 
+>         do load_specification table3_baseline 0
+> */
+. 
+. set more off
+
+. clear
+
+. prog drop _all
+
+. 
+. local dir ../doc/mapreduce
+
+. local inputfile `dir'/`1'/inputfile.dta
+
+. local resultfile `dir'/`1'/`2'.csv
+
+. 
+. confirm file ../doc/mapreduce/`1'/TFP.dta
+
+. confirm file `inputfile'
+
+. confirm file `resultfile'
+
+. confirm file map/`1'.do
+
+. 
+. 
+. /* load parameters and set globals*/
+. do map/`1'.do
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Set necessary constants for a specification. 
+> This do-file cannot be run by itself, it is called by "estimate_specification
+> .do".
+> */
+. 
+. global datafile ../data/impmanuf
+
+. 
+. /* LHS variable*/
+. global output PlnQ
+
+. 
+. 
+. /* There are two kinds of state variables.
+> $states are in the production function.
+> $bygroup, $dummies
+>     affect the investment decision, hence are in the proxy, but do not direct
+> ly affect TFP. */
+. 
+. /* proxies for demand */
+. global demand lnQs2 corrected_firm_demand 
+
+. /* RHS variables identified in the first stage*/
+. global free ""
+
+. 
+. /* proxy for productivity */
+. global proxy inv
+
+. /* proxy function is estimated separately for each group */
+. global bygroup year
+
+. /* simple linear dummies to include in both proxy and prod fcn */
+. global dummies nace2year me
+
+. /* state variables */
+. global states lnK lnL afterforeign
+
+. /* these states only enter linearly */
+. global linear demand_1 demand_2  
+
+. /* instruments should include all states and lags */
+. global instruments lnK L.lnK lnL L.lnL afterforeign L.afterforeign demand_1  
+> L.demand_1 demand_2 
+
+. /* This is set of variables indexing IAP */
+. global IAPgroup egy
+
+. 
+. /* product count is based on the number of 4-digit categories */
+. global Ni N4i
+
+. /* this is not a sector-specific estimation */
+. global sector 0
+
+. 
+. /* define expression for sample */
+. global sample 1==1
+
+. 
+. 
+end of do-file
+
+. 
+. insheet using `resultfile', comma case
+(407 vars, 1 obs)
+
+. 
+. * name parameters consistenly with text
+. ren b_lnK alphastar
+
+. ren b_lnL betastar
+
+. ren b_PlnM gammastar
+
+. 
+. * count IAP groups
+. reshape long ahat shat, i(egy) j(IAPgroup)
+(note: j = 1)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       1
+Number of variables                 407   ->     408
+j variable (1 values)                     ->   IAPgroup
+xij variables:
+                                  ahat1   ->   ahat
+                                  shat1   ->   shat
+-----------------------------------------------------------------------------
+
+. su IAPgroup
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    IAPgroup |          1           1           .          1          1
+
+. local IAPgroups = r(max)
+
+. reshape wide
+(note: j = 1)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       1
+Number of variables                 408   ->     407
+j variable (1 values)          IAPgroup   ->   (dropped)
+xij variables:
+                                   ahat   ->   ahat1
+                                   shat   ->   shat1
+-----------------------------------------------------------------------------
+
+. 
+. * save Gn into a matrix
+. reshape long Gn, i(egy) j(n)
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->     367
+Number of variables                 407   ->      42
+j variable (367 values)                   ->   n
+xij variables:
+                      Gn0 Gn1 ... Gn366   ->   Gn
+-----------------------------------------------------------------------------
+
+. tsset n
+        time variable:  n, 0 to 366
+                delta:  1 unit
+
+. mkmat Gn
+
+. 
+. reshape wide
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      367   ->       1
+Number of variables                  42   ->     407
+j variable (367 values)               n   ->   (dropped)
+xij variables:
+                                     Gn   ->   Gn0 Gn1 ... Gn366
+-----------------------------------------------------------------------------
+
+. 
+. * save all other params into scalars
+. drop Gn*
+
+. unab params : _all
+
+. foreach param in `params' {
+  2.         scalar `param' = `param'[1]
+  3. }
+
+. 
+. clear
+
+. 
+. * define functions to calculate Gn and its inverse
+. /* mapping from N to GN and back */
+. prog def GN
+  1.     syntax newvarlist(max=1), n(string)
+  2. 
+.     qui gen `varlist' = .
+  3.     forval i=1/367 {
+  4.         qui replace `varlist' = Gn[`i',1] if `n'+1==`i'
+  5.     }
+  6. end
+
+. 
+. use ../doc/mapreduce/`1'/TFP
+
+. drop __*
+
+. 
+. * create firm-specific variables
+. qui su IAPgroup
+
+. local IAPgroups = r(max)
+
+. foreach X in a ahat shat B {
+  2.         gen `X' = .
+  3.         forval j=1/`IAPgroups' {
+  4.                 replace `X' = `X'`j' if IAPgroup==`j'
+  5.         }
+  6. }
+(127,472 missing values generated)
+(127,472 real changes made)
+(127,472 missing values generated)
+(127,472 real changes made)
+(127,472 missing values generated)
+(127,472 real changes made)
+(127,472 missing values generated)
+(127,472 real changes made)
+
+. drop Gn
+
+. GN Gn, n(Ni)
+
+. 
+. gen nu = (PlnQ+log(price_2digit/100))-gammastar*(PlnM+log(price_material/100)
+> )-gammastar*ahat*Gn-epsilonstar
+(179 missing values generated)
+
+. 
+. * mean unobserved TFP shock
+. gen ee = exp(epsilonstar)
+(179 missing values generated)
+
+. 
+. * ensure that total industry revenue is same in model as in data
+. * this does not have E(exp epsilon) yet
+. gen data_revenue = exp(PlnQ+log(price_2digit/100))
+
+. foreach X of var *_revenue {
+  2.         egen mean_`X' = mean(`X'), by(nace2 year)
+  3. }
+
+. 
+. gen weight = data_revenue/ee
+(179 missing values generated)
+
+. 
+. egen sum_exp_e = sum(ee*weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. egen sum_weight = sum(weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. gen Eee = sum_exp_e/sum_weight
+(179 missing values generated)
+
+. 
+. * See equation A6 in Appendix A
+. gen model_revenue = gammastar^(gammastar/(1-gammastar))*exp((nu+gammastar*aha
+> t*Gn)/(1-gammastar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen pi0 = (1-gammastar)*gammastar^(gammastar/(1-gammastar))*exp(nu/(1-gammast
+> ar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen lnpi0 = ln(pi0)
+(179 missing values generated)
+
+. 
+. *************** some automated tests
+. * lnpi0 should be collinear with nu
+. areg lnpi0 nu, a(nace2year)
+
+Linear regression, absorbing indicators         Number of obs     =    127,293
+                                                F(   1, 127030)   =          .
+                                                Prob > F          =          .
+                                                R-squared         =     1.0000
+                                                Adj R-squared     =     1.0000
+                                                Root MSE          =     0.0000
+
+------------------------------------------------------------------------------
+       lnpi0 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          nu |   4.038644          .        .       .            .           .
+       _cons |  -2.067702          .        .       .            .           .
+-------------+----------------------------------------------------------------
+   nace2year |    F(261, 127030) =          .       .         (262 categories)
+
+. assert e(r2)>0.9999
+
+. * nu should have values whenever its components have
+. count if !missing(PlnQ,PlnM,epsilonstar)
+  127,293
+
+. scalar n1 = r(N)
+
+. count if !missing(nu)
+  127,293
+
+. assert n1 == r(N)
+
+. * G(0)=0
+. su Gn if Ni==0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          Gn |     78,273           0           0          0          0
+
+. assert r(mean)==0
+
+. * each Ni has a G(Ni)
+. gen byte noGn = missing(Gn) & !missing(Ni)
+
+. su noGn
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+        noGn |    127,472           0           0          0          0
+
+. assert r(max)==0
+
+. drop noGn
+
+. * each IAPgroup has a separate ahat
+. tab IAPgroup
+
+ group(egy) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    127,472      100.00      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. scalar n1 = r(r)
+
+. tab ahat
+
+       ahat |      Freq.     Percent        Cum.
+------------+-----------------------------------
+   .3267903 |    127,472      100.00      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. assert n1 == r(r)
+
+. 
+. set more on
+
+. 
+. 
+end of do-file
+
+. 
+. * Figures 1 and 2, import share as a function of N
+. local sample Ni<=200
+
+. 
+. drop sum_weight
+
+. 
+. egen Ntag = tag(Ni afterforeign)
+
+. egen grid = cut(Ni), group(500)
+
+. 
+. egen sum_import = sum(winsor_Pimp*Pintermed), by(Ni)
+
+. egen sum_weight = sum(Pintermed), by(Ni)
+
+. gen s_hat = sum_import/sum_weight
+
+.  
+. gen fitted = s1*Gn
+
+.  
+. tw (line s_hat fitted Ni if Ntag & `sample', sort), legend(order(1 "Average i
+> mport share" 2 "Estimated SG(n)")) `options'
+
+. graphexportpdf ../text/graphs/figure1.`format'
+note, the file extension .pdf is allowed but not necessary
+note, replace option is always on with graphexportpdf
+(note: file ../text/graphs/figure1.eps not found)
+(file ../text/graphs/figure1.eps written in EPS format)
+
+
+
+. 
+. do load_specification table4_foreign 0
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Load the parameters estimated in a given specification, e.g.
+> 
+>         do load_specification table3_baseline 0
+> */
+. 
+. set more off
+
+. clear
+
+. prog drop _all
+
+. 
+. local dir ../doc/mapreduce
+
+. local inputfile `dir'/`1'/inputfile.dta
+
+. local resultfile `dir'/`1'/`2'.csv
+
+. 
+. confirm file ../doc/mapreduce/`1'/TFP.dta
+
+. confirm file `inputfile'
+
+. confirm file `resultfile'
+
+. confirm file map/`1'.do
+
+. 
+. 
+. /* load parameters and set globals*/
+. do map/`1'.do
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Set necessary constants for a specification. 
+> This do-file cannot be run by itself, it is called by "estimate_specification
+> .do".
+> */
+. 
+. global datafile ../data/impmanuf
+
+. 
+. /* LHS variable*/
+. global output PlnQ
+
+. 
+. /* proxies for demand */
+. global demand lnQs2 corrected_firm_demand
+
+. /* RHS variables identified in the first stage*/
+. global free ""
+
+. 
+. /* There are two kinds of state variables.
+> $states are in the production function.
+> $bygroup, $dummies
+>     affect the investment decision, hence are in the proxy, but do not direct
+> ly affect TFP. */
+. 
+. /* proxy for productivity */
+. global proxy inv
+
+. /* proxy function is estimated separately for each group */
+. global bygroup year
+
+. /* simple linear dummies to include in both proxy and prod fcn */
+. * these are now included separately, first is the longest, to absorb
+. global dummies nace2year me
+
+. /* state variables */
+. global states lnK lnL afterforeign 
+
+. /* these states only enter linearly */
+. global linear demand_1 demand_2  
+
+. /* instruments should include all states and lags */
+. global instruments lnK L.lnK lnL L.lnL afterforeign L.afterforeign demand_1 L
+> .demand_1 demand_2  
+
+. /* separate import-augmenting productivity for foreign and domestic firms */
+. global IAPgroup afterforeign
+
+. 
+. 
+. /* product count is based on the number of 4-digit categories */
+. global Ni N4i
+
+. /* this is not a sector-specific estimation */
+. global sector 0
+
+. 
+. /* define expression for sample */
+. global sample 1==1
+
+. 
+. 
+. 
+end of do-file
+
+. 
+. insheet using `resultfile', comma case
+(412 vars, 1 obs)
+
+. 
+. * name parameters consistenly with text
+. ren b_lnK alphastar
+
+. ren b_lnL betastar
+
+. ren b_PlnM gammastar
+
+. 
+. * count IAP groups
+. reshape long ahat shat, i(egy) j(IAPgroup)
+(note: j = 1 2)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       2
+Number of variables                 412   ->     411
+j variable (2 values)                     ->   IAPgroup
+xij variables:
+                            ahat1 ahat2   ->   ahat
+                            shat1 shat2   ->   shat
+-----------------------------------------------------------------------------
+
+. su IAPgroup
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    IAPgroup |          2         1.5    .7071068          1          2
+
+. local IAPgroups = r(max)
+
+. reshape wide
+(note: j = 1 2)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                        2   ->       1
+Number of variables                 411   ->     412
+j variable (2 values)          IAPgroup   ->   (dropped)
+xij variables:
+                                   ahat   ->   ahat1 ahat2
+                                   shat   ->   shat1 shat2
+-----------------------------------------------------------------------------
+
+. 
+. * save Gn into a matrix
+. reshape long Gn, i(egy) j(n)
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->     367
+Number of variables                 412   ->      47
+j variable (367 values)                   ->   n
+xij variables:
+                      Gn0 Gn1 ... Gn366   ->   Gn
+-----------------------------------------------------------------------------
+
+. tsset n
+        time variable:  n, 0 to 366
+                delta:  1 unit
+
+. mkmat Gn
+
+. 
+. reshape wide
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      367   ->       1
+Number of variables                  47   ->     412
+j variable (367 values)               n   ->   (dropped)
+xij variables:
+                                     Gn   ->   Gn0 Gn1 ... Gn366
+-----------------------------------------------------------------------------
+
+. 
+. * save all other params into scalars
+. drop Gn*
+
+. unab params : _all
+
+. foreach param in `params' {
+  2.         scalar `param' = `param'[1]
+  3. }
+
+. 
+. clear
+
+. 
+. * define functions to calculate Gn and its inverse
+. /* mapping from N to GN and back */
+. prog def GN
+  1.     syntax newvarlist(max=1), n(string)
+  2. 
+.     qui gen `varlist' = .
+  3.     forval i=1/367 {
+  4.         qui replace `varlist' = Gn[`i',1] if `n'+1==`i'
+  5.     }
+  6. end
+
+. 
+. use ../doc/mapreduce/`1'/TFP
+
+. drop __*
+
+. 
+. * create firm-specific variables
+. qui su IAPgroup
+
+. local IAPgroups = r(max)
+
+. foreach X in a ahat shat B {
+  2.         gen `X' = .
+  3.         forval j=1/`IAPgroups' {
+  4.                 replace `X' = `X'`j' if IAPgroup==`j'
+  5.         }
+  6. }
+(127,472 missing values generated)
+(103,929 real changes made)
+(23,543 real changes made)
+(127,472 missing values generated)
+(103,929 real changes made)
+(23,543 real changes made)
+(127,472 missing values generated)
+(103,929 real changes made)
+(23,543 real changes made)
+(127,472 missing values generated)
+(103,929 real changes made)
+(23,543 real changes made)
+
+. drop Gn
+
+. GN Gn, n(Ni)
+
+. 
+. gen nu = (PlnQ+log(price_2digit/100))-gammastar*(PlnM+log(price_material/100)
+> )-gammastar*ahat*Gn-epsilonstar
+(179 missing values generated)
+
+. 
+. * mean unobserved TFP shock
+. gen ee = exp(epsilonstar)
+(179 missing values generated)
+
+. 
+. * ensure that total industry revenue is same in model as in data
+. * this does not have E(exp epsilon) yet
+. gen data_revenue = exp(PlnQ+log(price_2digit/100))
+
+. foreach X of var *_revenue {
+  2.         egen mean_`X' = mean(`X'), by(nace2 year)
+  3. }
+
+. 
+. gen weight = data_revenue/ee
+(179 missing values generated)
+
+. 
+. egen sum_exp_e = sum(ee*weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. egen sum_weight = sum(weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. gen Eee = sum_exp_e/sum_weight
+(179 missing values generated)
+
+. 
+. * See equation A6 in Appendix A
+. gen model_revenue = gammastar^(gammastar/(1-gammastar))*exp((nu+gammastar*aha
+> t*Gn)/(1-gammastar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen pi0 = (1-gammastar)*gammastar^(gammastar/(1-gammastar))*exp(nu/(1-gammast
+> ar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen lnpi0 = ln(pi0)
+(179 missing values generated)
+
+. 
+. *************** some automated tests
+. * lnpi0 should be collinear with nu
+. areg lnpi0 nu, a(nace2year)
+
+Linear regression, absorbing indicators         Number of obs     =    127,293
+                                                F(   1, 127030)   =          .
+                                                Prob > F          =          .
+                                                R-squared         =     1.0000
+                                                Adj R-squared     =     1.0000
+                                                Root MSE          =     0.0000
+
+------------------------------------------------------------------------------
+       lnpi0 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          nu |   4.038644          .        .       .            .           .
+       _cons |  -2.068071          .        .       .            .           .
+-------------+----------------------------------------------------------------
+   nace2year |    F(261, 127030) =          .       .         (262 categories)
+
+. assert e(r2)>0.9999
+
+. * nu should have values whenever its components have
+. count if !missing(PlnQ,PlnM,epsilonstar)
+  127,293
+
+. scalar n1 = r(N)
+
+. count if !missing(nu)
+  127,293
+
+. assert n1 == r(N)
+
+. * G(0)=0
+. su Gn if Ni==0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          Gn |     78,273           0           0          0          0
+
+. assert r(mean)==0
+
+. * each Ni has a G(Ni)
+. gen byte noGn = missing(Gn) & !missing(Ni)
+
+. su noGn
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+        noGn |    127,472           0           0          0          0
+
+. assert r(max)==0
+
+. drop noGn
+
+. * each IAPgroup has a separate ahat
+. tab IAPgroup
+
+group(after |
+   foreign) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    103,929       81.53       81.53
+          2 |     23,543       18.47      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. scalar n1 = r(r)
+
+. tab ahat
+
+       ahat |      Freq.     Percent        Cum.
+------------+-----------------------------------
+   .2710939 |    103,929       81.53       81.53
+    .390417 |     23,543       18.47      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. assert n1 == r(r)
+
+. 
+. set more on
+
+. 
+. 
+end of do-file
+
+. 
+. drop sum_weight
+
+. 
+. egen Ntag = tag(Ni afterforeign)
+
+. egen grid = cut(Ni), group(500)
+
+. 
+. egen sum_import = sum(winsor_Pimp*Pintermed), by(Ni afterforeign)
+
+. egen sum_weight = sum(Pintermed), by(Ni afterforeign)
+
+. gen s_hat = sum_import/sum_weight
+
+. 
+. gen fitted = cond(afterforeign,s2,s1)*Gn
+
+. 
+. label var afterforeign "foreign status"
+
+. label def foreign 0 "Domestic firms" 1 "Foreign firms"
+
+. label val afterforeign foreign
+
+. tw      (line s_hat fitted Ni if Ntag & `sample', sort by(afterforeign, note(
+> ""))), ///
+>                 legend(order(1 "Average import share" 2 "Estimated SG(n)")) `
+> options'
+
+. graphexportpdf ../text/graphs/figure2.`format'
+note, the file extension .pdf is allowed but not necessary
+note, replace option is always on with graphexportpdf
+(note: file ../text/graphs/figure2.eps not found)
+(file ../text/graphs/figure2.eps written in EPS format)
+
+
+
+. 
+. * Figure 3: switcher event study
+. graph use ../text/graphs/switcher_event_study_omegastar.gph, `options'
+
+. graphexportpdf ../text/graphs/figure3.`format'
+note, the file extension .pdf is allowed but not necessary
+note, replace option is always on with graphexportpdf
+(note: file ../text/graphs/figure3.eps not found)
+(file ../text/graphs/figure3.eps written in EPS format)
+
+
+
+. 
+. * Figure 4: fixed cost schedule
+. graph use ../text/graphs/fixed_cost_function.gph, `options'
+
+. graphexportpdf ../text/graphs/figure4.`format'
+note, the file extension .pdf is allowed but not necessary
+note, replace option is always on with graphexportpdf
+(note: file ../text/graphs/figure4.eps not found)
+(file ../text/graphs/figure4.eps written in EPS format)
+
+
+
+. 
+. * Figure 5: domestic inputs
+. clear
+
+. tempfile domestic
+
+. save `domestic', replace emptyok
+(note: dataset contains 0 observations)
+(note: file /tmp/St41606.000001 not found)
+file /tmp/St41606.000001 saved
+
+. foreach t in -0.10 -0.08 -0.06 -0.04 -0.02 -0.00 0.02 0.04 0.06 0.08 0.10 0.1
+> 2 0.14 0.16 0.20 0.24 0.28 0.32 0.36 {
+  2.         forval comp=0/2 {
+  3.                 clear
+  4.                 insheet using "../doc/simulations/use+logtau~`t'+complemen
+> tarity~`comp'+foreignpresence~1+offset~0+global+specification+table3_baseline
+> .csv"
+  5.                 append using `domestic'
+  6.                 save `domestic', replace
+  7.         }
+  8. }
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+(note: variable change_in_domestic_inputs was byte, now float to accommodate
+       using data's values)
+(note: variable level_gain was byte, now float to accommodate using data's
+       values)
+(note: variable import_price_gain was byte, now float to accommodate using
+       data's values)
+(note: variable extensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable intensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable tfp_gain was byte, now float to accommodate using data's
+       values)
+(note: variable logtau_scalar was byte, now float to accommodate using data's
+       values)
+(note: variable logtau was byte, now float to accommodate using data's
+       values)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+(note: variable change_in_domestic_inputs was byte, now float to accommodate
+       using data's values)
+(note: variable level_gain was byte, now float to accommodate using data's
+       values)
+(note: variable import_price_gain was byte, now float to accommodate using
+       data's values)
+(note: variable extensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable intensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable tfp_gain was byte, now float to accommodate using data's
+       values)
+(note: variable logtau_scalar was byte, now float to accommodate using data's
+       values)
+(note: variable logtau was byte, now float to accommodate using data's
+       values)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+(note: variable change_in_domestic_inputs was byte, now float to accommodate
+       using data's values)
+(note: variable level_gain was byte, now float to accommodate using data's
+       values)
+(note: variable import_price_gain was byte, now float to accommodate using
+       data's values)
+(note: variable extensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable intensive_margin was byte, now float to accommodate using
+       data's values)
+(note: variable tfp_gain was byte, now float to accommodate using data's
+       values)
+(note: variable logtau_scalar was byte, now float to accommodate using data's
+       values)
+(note: variable logtau was byte, now float to accommodate using data's
+       values)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+(62 vars, 1 obs)
+file /tmp/St41606.000001 saved
+
+. 
+. su sum_domestic_inputs0 if logtau==0 & complementarity==1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+sum_domest~0 |          1    3.72e+07           .   3.72e+07   3.72e+07
+
+. scalar base = r(mean)
+
+. gen tau_pp = exp(logtau)*100-100
+
+. 
+. gen domestic = log(sum_domestic_inputs1)-log(base)
+
+. label var domestic "Domestic input demand (log, relative to baseline)"
+
+. label var tau_pp "Change in tariff (pp)"
+
+. 
+. tw (line domestic tau_pp if complementarity==1, sort) (line domestic tau_pp i
+> f complementarity==2, sort) (line domestic tau_pp if complementarity==0, sort
+> ), legend(order(1 "Benchmark" 2 "Imperfect substitution" 3 "Quality")) `optio
+> ns'
+
+. graphexportpdf ../text/graphs/figure5.`format' 
+note, the file extension .pdf is allowed but not necessary
+note, replace option is always on with graphexportpdf
+(note: file ../text/graphs/figure5.eps not found)
+(file ../text/graphs/figure5.eps written in EPS format)
+
+
+
+. 
+. 
+end of do-file

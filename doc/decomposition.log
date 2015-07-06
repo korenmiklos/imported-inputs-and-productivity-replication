@@ -1,0 +1,573 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /home/koren/projects/prod-AER-replicarion-package/code/../doc/deco
+> mposition.log
+  log type:  text
+ opened on:   2 Jul 2015, 20:52:57
+
+. 
+. clear all
+
+. 
+. local ahat ahat
+
+. if ("`1'"!="") {
+.         local ahat a
+. }
+
+. 
+. local vars import_effect_tfp
+
+. 
+. /* load parameters and set globals*/
+. do map/table5_year.do
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Set necessary constants for a specification. 
+> This do-file cannot be run by itself, it is called by "estimate_specification
+> .do".
+> */
+. 
+. /* status is the additional state variable if needed */
+. global datafile ../data/impmanuf
+
+. /* LHS variable*/
+. global output PlnQ
+
+. 
+. /* RHS variables identified in the first stage*/
+. global free ""
+
+. /* proxies for demand */
+. global demand lnQs2 corrected_firm_demand 
+
+. 
+. /* There are two kinds of state variables.
+> $states are in the production function.
+> $bygroup, $dummies
+>     affect the investment decision, hence are in the proxy, but do not direct
+> ly affect TFP. */
+. 
+. /* proxy for productivity */
+. global proxy inv
+
+. /* proxy function is estimated separately for each group */
+. global bygroup year
+
+. /* simple linear dummies to include in both proxy and prod fcn */
+. global dummies nace2year me 
+
+. /* state variables */
+. global states lnK lnL afterforeign 
+
+. /* import-augmenting productivity different by period and by foreign status *
+> /
+. global IAPgroup afterforeign period
+
+. 
+. /* these states only enter linearly */
+. global linear demand_1 demand_2 
+
+. /* instruments should include all states and lags */
+. global instruments lnK L.lnK lnL L.lnL afterforeign L.afterforeign period dem
+> and_1 L.demand_1 demand_2  
+
+. 
+. /* product count is based on the number of 4-digit categories */
+. global Ni N4i
+
+. /* this is not a sector-specific estimation */
+. global sector 0
+
+. 
+. /* define expression for sample */
+. global sample 1==1
+
+. 
+. 
+. 
+end of do-file
+
+. 
+. insheet using ../doc/mapreduce/table5_year/0.csv, comma case
+(442 vars, 1 obs)
+
+. 
+. * name parameters consistenly with text
+. ren b_lnK alphastar
+
+. ren b_lnL betastar
+
+. ren b_PlnM gammastar
+
+. 
+. * count IAP groups
+. reshape long ahat shat, i(egy) j(IAPgroup)
+(note: j = 1 2 3 4 5 6 7 8)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       8
+Number of variables                 442   ->     429
+j variable (8 values)                     ->   IAPgroup
+xij variables:
+                  ahat1 ahat2 ... ahat8   ->   ahat
+                  shat1 shat2 ... shat8   ->   shat
+-----------------------------------------------------------------------------
+
+. su IAPgroup
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    IAPgroup |          8         4.5     2.44949          1          8
+
+. local IAPgroups = r(max)
+
+. reshape wide
+(note: j = 1 2 3 4 5 6 7 8)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                        8   ->       1
+Number of variables                 429   ->     442
+j variable (8 values)          IAPgroup   ->   (dropped)
+xij variables:
+                                   ahat   ->   ahat1 ahat2 ... ahat8
+                                   shat   ->   shat1 shat2 ... shat8
+-----------------------------------------------------------------------------
+
+. 
+. * save Gn into a matrix
+. reshape long Gn, i(egy) j(n)
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->     367
+Number of variables                 442   ->      77
+j variable (367 values)                   ->   n
+xij variables:
+                      Gn0 Gn1 ... Gn366   ->   Gn
+-----------------------------------------------------------------------------
+
+. tsset n
+        time variable:  n, 0 to 366
+                delta:  1 unit
+
+. mkmat Gn
+
+. 
+. reshape wide
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
+> 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+>  52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 7
+> 7 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 1
+> 02 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 12
+> 1 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140
+>  141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 
+> 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 1
+> 79 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 19
+> 8 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217
+>  218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 
+> 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 2
+> 56 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 27
+> 5 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294
+>  295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 
+> 314 315 316 317 318 319 320 321 322 323 324 325 326 327 328 329 330 331 332 3
+> 33 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 35
+> 2 353 354 355 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      367   ->       1
+Number of variables                  77   ->     442
+j variable (367 values)               n   ->   (dropped)
+xij variables:
+                                     Gn   ->   Gn0 Gn1 ... Gn366
+-----------------------------------------------------------------------------
+
+. 
+. * save all other params into scalars
+. drop Gn*
+
+. unab params : _all
+
+. foreach param in `params' {
+  2.         scalar `param' = `param'[1]
+  3. }
+
+. 
+. clear
+
+. 
+. * define functions to calculate Gn and its inverse
+. /* mapping from N to GN and back */
+. prog def GN
+  1.     syntax newvarlist(max=1), n(string)
+  2. 
+.     qui gen `varlist' = .
+  3.     forval i=1/367 {
+  4.         qui replace `varlist' = Gn[`i',1] if `n'+1==`i'
+  5.     }
+  6. end
+
+. 
+. use ../data/impmanuf
+
+. 
+. /* variable definitions */
+. tsset id year
+       panel variable:  id (unbalanced)
+        time variable:  year, 1992 to 2003, but with gaps
+                delta:  1 unit
+
+. ren $Ni Ni
+
+. /* winsorize here */
+. gen winsor_Pimp = cond(Pimp>Gmax,Gmax,Pimp)
+
+. * 3-year periods
+. gen period = year
+
+. recode period min/1994 = 1994 1995/1997=1997 1998/2000=2000 2001/max=2003
+(period: 114766 changes made)
+
+. /* before and after foreign ownership */
+. foreach X of var foreign  {
+  2.     egen first`X' = min(cond(`X',year,.)), by(id)
+  3.     gen byte after`X' = year>=first`X' & !missing(first`X')
+  4. }
+(130887 missing values generated)
+
+. /* IAPgroup should index firms with the same IAP */
+. egen IAPgroup = group($IAPgroup)
+
+. gen byte importer = Ni>0
+
+. 
+. 
+. 
+. * create firm-specific variables
+. qui su IAPgroup
+
+. local IAPgroups = r(max)
+
+. foreach X in a ahat shat B {
+  2.         gen `X' = .
+  3.         forval j=1/`IAPgroups' {
+  4.                 replace `X' = `X'`j' if IAPgroup==`j'
+  5.         }
+  6. }
+(173,516 missing values generated)
+(25,065 real changes made)
+(34,875 real changes made)
+(40,672 real changes made)
+(33,121 real changes made)
+(6,684 real changes made)
+(9,939 real changes made)
+(11,595 real changes made)
+(11,565 real changes made)
+(173,516 missing values generated)
+(25,065 real changes made)
+(34,875 real changes made)
+(40,672 real changes made)
+(33,121 real changes made)
+(6,684 real changes made)
+(9,939 real changes made)
+(11,595 real changes made)
+(11,565 real changes made)
+(173,516 missing values generated)
+(25,065 real changes made)
+(34,875 real changes made)
+(40,672 real changes made)
+(33,121 real changes made)
+(6,684 real changes made)
+(9,939 real changes made)
+(11,595 real changes made)
+(11,565 real changes made)
+(173,516 missing values generated)
+(25,065 real changes made)
+(34,875 real changes made)
+(40,672 real changes made)
+(33,121 real changes made)
+(6,684 real changes made)
+(9,939 real changes made)
+(11,595 real changes made)
+(11,565 real changes made)
+
+. GN Gn, n(Ni)
+
+. 
+. gen Qbar = exp(alphastar*lnK+betastar*lnL+gammastar*PlnM)
+(12,019 missing values generated)
+
+. gen tfp = PlnQ-ln(Qbar)
+(13,635 missing values generated)
+
+. su tfp, d
+
+                             tfp
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%    -.6267582       -7.95805
+ 5%     .1862346      -7.943363
+10%     .4026394      -7.707101       Obs             159,881
+25%     .6061376      -7.560865       Sum of Wgt.     159,881
+
+50%      .771158                      Mean           .7698924
+                        Largest       Std. Dev.      .4543844
+75%     .9512112       6.500837
+90%     1.167226       6.504018       Variance       .2064652
+95%     1.352692       6.507487       Skewness      -1.391472
+99%     1.980597       7.037622       Kurtosis       31.34803
+
+. gen importshare = winsor_Pimp
+
+. 
+. gen import_effect_tfp = gammastar*`ahat'
+
+. 
+. * drop outliers
+. replace tfp = . if abs(tfp-r(mean))>3*r(sd)
+(2,910 real changes made, 2,910 to missing)
+
+. 
+. gen weight = Qbar*exp(tfp)
+(16,545 missing values generated)
+
+. drop if missing(weight)
+(16,545 observations deleted)
+
+. 
+. /* weight by sales */
+. foreach X of var importer Gn tfp importshare {
+  2.         replace `X' = `X' * weight
+  3. }
+variable importer was byte now float
+(71,245 real changes made)
+(71,245 real changes made)
+(156,963 real changes made)
+(71,201 real changes made)
+
+. 
+. collapse (mean) `vars' (sum) importer Gn tfp weight importshare importi, by(p
+> eriod afterforeign)
+
+. foreach X of var importer Gn tfp importshare {
+  2.         replace `X' = `X'/weight
+  3. }
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+
+. 
+. * Gn conditional on importing
+. gen cond_Gn = Gn/importer
+
+. 
+. reshape wide importer *Gn `vars' weight tfp importshare importi, i(period) j(
+> afterforeign)
+(note: j = 0 1)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                        8   ->       4
+Number of variables                  10   ->      17
+j variable (2 values)      afterforeign   ->   (dropped)
+xij variables:
+                               importer   ->   importer0 importer1
+                                     Gn   ->   Gn0 Gn1
+                                cond_Gn   ->   cond_Gn0 cond_Gn1
+                      import_effect_tfp   ->   import_effect_tfp0 import_effect
+> _tfp1
+                                 weight   ->   weight0 weight1
+                                    tfp   ->   tfp0 tfp1
+                            importshare   ->   importshare0 importshare1
+                                importi   ->   importi0 importi1
+-----------------------------------------------------------------------------
+
+. 
+. 
+. gen weight=weight0+weight1
+
+. gen wshare = weight1/weight
+
+. 
+. gen tfp = tfp0*(1-wshare)+tfp1*wshare
+
+. gen importshare = importshare0*(1-wshare)+importshare1*wshare
+
+. 
+. gen importer = wshare*importer1+(1-wshare)*importer0
+
+. gen wimportershare = wshare*importer1/importer
+
+. 
+. gen Gn = wshare*Gn1+(1-wshare)*Gn0
+
+. gen wGshare = wshare*Gn1/Gn
+
+. 
+. su
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+      period |          4      1998.5    3.872983       1994       2003
+import_eff~0 |          4    .2155639    .0227098   .1838011   .2362259
+   importer0 |          4    .8131862    .0305161   .7839981   .8509359
+         Gn0 |          4    .3253968    .0638475    .257441   .4009679
+        tfp0 |          4    .8866202    .0142558   .8783005   .9078974
+-------------+---------------------------------------------------------
+     weight0 |          4     9169376    772581.1    8446942   1.02e+07
+importshare0 |          4    .2102407     .025937   .1836382   .2340923
+    importi0 |          4     1497250    166600.9    1350750    1660047
+    cond_Gn0 |          4    .3985125    .0641266   .3244731   .4712081
+import_eff~1 |          4    .2927321    .0412494   .2495897     .34572
+-------------+---------------------------------------------------------
+   importer1 |          4    .9797903    .0124507   .9616376   .9886583
+         Gn1 |          4    .6006418    .0894994   .4795658   .6805779
+        tfp1 |          4    1.078017    .0913247   .9658731   1.158201
+     weight1 |          4    1.75e+07    1.10e+07    5322456   3.02e+07
+importshare1 |          4    .4381631    .0892222   .3210243    .521781
+-------------+---------------------------------------------------------
+    importi1 |          4     6746825     4997639    1270807   1.21e+07
+    cond_Gn1 |          4    .6122463    .0844109   .4986971   .6883854
+      weight |          4    2.67e+07    1.04e+07   1.56e+07   3.90e+07
+      wshare |          4    .6024269    .1952375   .3420967   .7740221
+         tfp |          4    1.014072    .0891785   .9103773   1.101638
+-------------+---------------------------------------------------------
+ importshare |          4    .3588498    .0967084   .2306375     .44265
+    importer |          4    .9196495    .0242068   .8888066   .9445371
+wimporters~e |          4    .6398462    .2000248    .370129   .8101782
+          Gn |          4     .513465    .0705778    .427856   .5849583
+     wGshare |          4    .7066313    .2347093   .3834419   .9005468
+
+. 
+. l period w*
+
+     +---------------------------------------------------------------+
+  1. | period |  weight0 |  weight1 |   weight |   wshare | wimpor~e |
+     |   1994 | 1.02e+07 |  5322456 | 1.56e+07 | .3420967 |  .370129 |
+     |---------------------------------------------------------------|
+     |                            wGshare                            |
+     |                           .3834419                            |
+     +---------------------------------------------------------------+
+
+     +---------------------------------------------------------------+
+  2. | period |  weight0 |  weight1 |   weight |   wshare | wimpor~e |
+     |   1997 |  9187224 | 1.20e+07 | 2.11e+07 | .5655559 | .6078972 |
+     |---------------------------------------------------------------|
+     |                            wGshare                            |
+     |                           .6850858                            |
+     +---------------------------------------------------------------+
+
+     +---------------------------------------------------------------+
+  3. | period |  weight0 |  weight1 |   weight |   wshare | wimpor~e |
+     |   2000 |  8446942 | 2.26e+07 | 3.11e+07 | .7280329 | .7711805 |
+     |---------------------------------------------------------------|
+     |                            wGshare                            |
+     |                           .8574508                            |
+     +---------------------------------------------------------------+
+
+     +---------------------------------------------------------------+
+  4. | period |  weight0 |  weight1 |   weight |   wshare | wimpor~e |
+     |   2003 |  8807457 | 3.02e+07 | 3.90e+07 | .7740221 | .8101782 |
+     |---------------------------------------------------------------|
+     |                            wGshare                            |
+     |                           .9005468                            |
+     +---------------------------------------------------------------+
+
+. 
+. 
+. foreach X of var w*share importer *Gn {
+  2.     su `X' if period==1994, meanonly
+  3.     scalar `X'1992=r(mean)
+  4. }
+
+. 
+. foreach X of any `vars' {
+  2.         gen intensive_`X' = (wGshare1992*`X'1+(1-wGshare1992)*`X'0)*Gn1992
+  3.         gen extensive_`X' = (wGshare1992*`X'1+(1-wGshare1992)*`X'0)*Gn  - 
+> intensive_`X'
+  4.         gen foreignimport_`X' = (wGshare*`X'1+(1-wGshare)*`X'0)*Gn - exten
+> sive_`X'-intensive_`X'
+  5. }
+
+. gen FDI = wshare*b_afterforeign
+
+. gen other = tfp-intensive_import_effect_tfp-extensive_import_effect_tfp-forei
+> gnimport_import_effect_tfp-FDI
+
+. 
+. l period tfp intensive_import_effect_tfp extensive_import_effect_tfp foreigni
+> mport_import_effect_tfp FDI
+
+     +---------------------------------------------------------------+
+     | period        tfp   intens~p   extens~p   foreig~p        FDI |
+     |---------------------------------------------------------------|
+  1. |   1994   .9103773   .1005929   1.10e-09   2.78e-17   .0171029 |
+  2. |   1997   .9706191   .1137313   .0154168   .0189928   .0282745 |
+  3. |   2000   1.073653   .0979861    .029162   .0310325   .0363974 |
+  4. |   2003   1.101638    .107251    .039381   .0113951   .0386966 |
+     +---------------------------------------------------------------+
+
+. 
+. foreach X of var tfp intensive_import_effect_tfp extensive_import_effect_tfp 
+> foreignimport_import_effect_tfp FDI other {
+  2.     su `X' if period==1994, meanonly
+  3.     replace `X'=`X'-r(mean)
+  4.         replace `X' = exp(`X')*100-100
+  5. }
+(4 real changes made)
+(3 real changes made)
+(4 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(1 real change made)
+(3 real changes made)
+(4 real changes made)
+(3 real changes made)
+(4 real changes made)
+(3 real changes made)
+
+. 
+. keep period tfp intensive_import_effect_tfp extensive_import_effect_tfp forei
+> gnimport_import_effect_tfp FDI
+
+. order period tfp intensive_import_effect_tfp extensive_import_effect_tfp fore
+> ignimport_import_effect_tfp FDI
+
+. outsheet using ../text/tables/table8-decomposition`1'.csv, replace
+(note: file ../text/tables/table8-decomposition.csv not found)
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /home/koren/projects/prod-AER-replicarion-package/code/../doc/deco
+> mposition.log
+  log type:  text
+ closed on:   2 Jul 2015, 20:53:19
+-------------------------------------------------------------------------------

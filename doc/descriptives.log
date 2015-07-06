@@ -1,0 +1,42 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /home/koren/projects/prod-AER-replicarion-package/code/../doc/desc
+> riptives.log
+  log type:  text
+ opened on:   2 Jul 2015, 17:33:45
+
+. do load_specification table3_baseline 0
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
+> American Economic Review.
+> 
+> Load the parameters estimated in a given specification, e.g.
+> 
+>         do load_specification table3_baseline 0
+> */
+. 
+. set more off
+
+. clear
+
+. prog drop _all
+
+. 
+. local dir ../doc/mapreduce
+
+. local inputfile `dir'/`1'/inputfile.dta
+
+. local resultfile `dir'/`1'/`2'.csv
+
+. 
+. confirm file ../doc/mapreduce/`1'/TFP.dta
+file ../doc/mapreduce/table3_baseline/TFP.dta not found
+r(601);
+
+end of do-file
+r(601);
+
+end of do-file
+r(601);
