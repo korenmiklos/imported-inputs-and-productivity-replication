@@ -112,7 +112,7 @@ $(TABLES_DIR)/table8-decomposition.csv: decomposition.do $(ESTIMATES_DIR)/table5
 $(TABLES_DIR)/table%-regression.csv: estimate $(CODE_DIR)/write_results_to_excel.py
 	python write_results_to_excel.py $(notdir $(basename $@)) > $@
 
-$(TABLES_DIR)/table9-bottom.csv $(TABLES_DIR)/table9-top.csv: table9.do $(GRAPHS_DIR)/offset_tfp_gain.gph
+$(TABLES_DIR)/table9-bottom.csv $(TABLES_DIR)/table9-top.csv: table9.do $(GRAPHS_DIR)/offset_tfp_gain.gph $(GRAPHS_DIR)/foreignpresence_tfp_gain.gph
 	$(STATA) do table9
 
 save_results: $(ESTIMATES_DIR)/*/*.csv ../doc/simulations/use+*.csv ../text/tables/table*.csv ../text/graphs/*.gph

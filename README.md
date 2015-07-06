@@ -9,7 +9,7 @@ Instructions
 
 Our data preparation and estimation code use Stata 13 and Python 2.7 and run under Unix-like systems (Max OS X and Linux distributions).
 
-We have included a `Makefile` that runs all the code used in calculating the descriptive statistics, the point estimation of parameter values, the bootstrap, and the figures of simulation results. Unzip all the files, and once you have the dataset in `data/impmanuf.dta`, just run
+We have included a `Makefile` that runs all the code used in calculating the descriptive statistics, the point estimation of parameter values, the bootstrap, and the figures of simulation results. Unzip all the files, and once you have the necessary datasets in `data/impmanuf.dta` and `data/customs/import/hs6imports.dta`, just run
 ```
 cd code
 make all
