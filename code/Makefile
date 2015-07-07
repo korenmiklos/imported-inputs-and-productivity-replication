@@ -7,7 +7,7 @@ ESTIMATE_LATER 	= estimate_specification.do estimate_Gn.do run_the_estimation.do
 ESTIMATE_CMD	= $(STATA) do estimate_specification $(lastword $(subst /, ,$(dir $@))) $(notdir $(basename $@))
 ESTIMATE_CMD_1	= $(STATA) do estimate_specification $(lastword $(subst /, ,$(dir $@))) 0
 # set your stata executable here
-STATA 			= stata-se -b
+STATA 			= /usr/local/stata13/stata-se -b
 ESTIMATES_DIR 	= ../doc/mapreduce
 GRAPHS_DIR		= ../text/graphs
 TABLES_DIR		= ../text/tables
