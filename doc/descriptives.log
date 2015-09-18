@@ -1,16 +1,15 @@
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /home/koren/projects/prod-AER-replicarion-package/code/../doc/desc
-> riptives.log
+       log:  /Volumes/Home/Dropbox/projects/published/imported-inputs-and-productivity-replication/code/../doc/descriptive
+> s.log
   log type:  text
- opened on:   2 Jul 2015, 17:33:45
+ opened on:  18 Sep 2015, 15:34:42
 
 . do load_specification table3_baseline 0
 
 . /*
 > Replication code for "Imported Inputs and Productivity". Please cite as
->         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." 
-> American Economic Review.
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." American Economic Review.
 > 
 > Load the parameters estimated in a given specification, e.g.
 > 
@@ -32,11 +31,626 @@
 
 . 
 . confirm file ../doc/mapreduce/`1'/TFP.dta
-file ../doc/mapreduce/table3_baseline/TFP.dta not found
-r(601);
 
-end of do-file
-r(601);
+. confirm file `inputfile'
 
+. confirm file `resultfile'
+
+. confirm file map/`1'.do
+
+. 
+. 
+. /* load parameters and set globals*/
+. do map/`1'.do
+
+. /*
+> Replication code for "Imported Inputs and Productivity". Please cite as
+>         Halpern, Koren and Szeidl. 2015. "Imported Inputs and Productivity." American Economic Review.
+> 
+> Set necessary constants for a specification. 
+> This do-file cannot be run by itself, it is called by "estimate_specification.do".
+> */
+. 
+. global datafile ../data/impmanuf
+
+. 
+. /* LHS variable*/
+. global output PlnQ
+
+. 
+. 
+. /* There are two kinds of state variables.
+> $states are in the production function.
+> $bygroup, $dummies
+>     affect the investment decision, hence are in the proxy, but do not directly affect TFP. */
+. 
+. /* proxies for demand */
+. global demand lnQs2 corrected_firm_demand 
+
+. /* RHS variables identified in the first stage*/
+. global free ""
+
+. 
+. /* proxy for productivity */
+. global proxy inv
+
+. /* proxy function is estimated separately for each group */
+. global bygroup year
+
+. /* simple linear dummies to include in both proxy and prod fcn */
+. global dummies nace2year me
+
+. /* state variables */
+. global states lnK lnL afterforeign
+
+. /* these states only enter linearly */
+. global linear demand_1 demand_2  
+
+. /* instruments should include all states and lags */
+. global instruments lnK L.lnK lnL L.lnL afterforeign L.afterforeign demand_1  L.demand_1 demand_2 
+
+. /* This is set of variables indexing IAP */
+. global IAPgroup egy
+
+. 
+. /* product count is based on the number of 4-digit categories */
+. global Ni N4i
+
+. /* this is not a sector-specific estimation */
+. global sector 0
+
+. 
+. /* define expression for sample */
+. global sample 1==1
+
+. 
+. 
 end of do-file
-r(601);
+
+. 
+. insheet using `resultfile', comma case
+(407 vars, 1 obs)
+
+. 
+. * name parameters consistenly with text
+. ren b_lnK alphastar
+
+. ren b_lnL betastar
+
+. ren b_PlnM gammastar
+
+. 
+. * count IAP groups
+. reshape long ahat shat, i(egy) j(IAPgroup)
+(note: j = 1)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       1
+Number of variables                 407   ->     408
+j variable (1 values)                     ->   IAPgroup
+xij variables:
+                                  ahat1   ->   ahat
+                                  shat1   ->   shat
+-----------------------------------------------------------------------------
+
+. su IAPgroup
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+    IAPgroup |         1           1           .          1          1
+
+. local IAPgroups = r(max)
+
+. reshape wide
+(note: j = 1)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->       1
+Number of variables                 408   ->     407
+j variable (1 values)          IAPgroup   ->   (dropped)
+xij variables:
+                                   ahat   ->   ahat1
+                                   shat   ->   shat1
+-----------------------------------------------------------------------------
+
+. 
+. * save Gn into a matrix
+. reshape long Gn, i(egy) j(n)
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 4
+> 0 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 8
+> 0 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 1
+> 15 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 1
+> 45 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 1
+> 75 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 2
+> 05 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 2
+> 35 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 256 257 258 259 260 261 262 263 264 2
+> 65 266 267 268 269 270 271 272 273 274 275 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294 2
+> 95 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 314 315 316 317 318 319 320 321 322 323 324 3
+> 25 326 327 328 329 330 331 332 333 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 352 353 354 3
+> 55 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                        1   ->     367
+Number of variables                 407   ->      42
+j variable (367 values)                   ->   n
+xij variables:
+                      Gn0 Gn1 ... Gn366   ->   Gn
+-----------------------------------------------------------------------------
+
+. tsset n
+        time variable:  n, 0 to 366
+                delta:  1 unit
+
+. mkmat Gn
+
+. 
+. reshape wide
+(note: j = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 4
+> 0 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 8
+> 0 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 1
+> 15 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 1
+> 45 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 1
+> 75 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 2
+> 05 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 2
+> 35 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 256 257 258 259 260 261 262 263 264 2
+> 65 266 267 268 269 270 271 272 273 274 275 276 277 278 279 280 281 282 283 284 285 286 287 288 289 290 291 292 293 294 2
+> 95 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 314 315 316 317 318 319 320 321 322 323 324 3
+> 25 326 327 328 329 330 331 332 333 334 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 352 353 354 3
+> 55 356 357 358 359 360 361 362 363 364 365 366)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      367   ->       1
+Number of variables                  42   ->     407
+j variable (367 values)               n   ->   (dropped)
+xij variables:
+                                     Gn   ->   Gn0 Gn1 ... Gn366
+-----------------------------------------------------------------------------
+
+. 
+. * save all other params into scalars
+. drop Gn*
+
+. unab params : _all
+
+. foreach param in `params' {
+  2.         scalar `param' = `param'[1]
+  3. }
+
+. 
+. clear
+
+. 
+. * define functions to calculate Gn and its inverse
+. /* mapping from N to GN and back */
+. prog def GN
+  1.     syntax newvarlist(max=1), n(string)
+  2. 
+.     qui gen `varlist' = .
+  3.     forval i=1/367 {
+  4.         qui replace `varlist' = Gn[`i',1] if `n'+1==`i'
+  5.     }
+  6. end
+
+. 
+. use ../doc/mapreduce/`1'/TFP
+
+. drop __*
+
+. 
+. * create firm-specific variables
+. qui su IAPgroup
+
+. local IAPgroups = r(max)
+
+. foreach X in a ahat shat B {
+  2.         gen `X' = .
+  3.         forval j=1/`IAPgroups' {
+  4.                 replace `X' = `X'`j' if IAPgroup==`j'
+  5.         }
+  6. }
+(127472 missing values generated)
+(127472 real changes made)
+(127472 missing values generated)
+(127472 real changes made)
+(127472 missing values generated)
+(127472 real changes made)
+(127472 missing values generated)
+(127472 real changes made)
+
+. drop Gn
+
+. GN Gn, n(Ni)
+
+. 
+. gen nu = (PlnQ+log(price_2digit/100))-gammastar*(PlnM+log(price_material/100))-gammastar*ahat*Gn-epsilonstar
+(179 missing values generated)
+
+. 
+. * mean unobserved TFP shock
+. gen ee = exp(epsilonstar)
+(179 missing values generated)
+
+. 
+. * ensure that total industry revenue is same in model as in data
+. * this does not have E(exp epsilon) yet
+. gen data_revenue = exp(PlnQ+log(price_2digit/100))
+
+. foreach X of var *_revenue {
+  2.         egen mean_`X' = mean(`X'), by(nace2 year)
+  3. }
+
+. 
+. gen weight = data_revenue/ee
+(179 missing values generated)
+
+. 
+. egen sum_exp_e = sum(ee*weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. egen sum_weight = sum(weight) if !missing(ee,weight), by(nace2 year)
+(179 missing values generated)
+
+. gen Eee = sum_exp_e/sum_weight
+(179 missing values generated)
+
+. 
+. * See equation A6 in Appendix A
+. gen model_revenue = gammastar^(gammastar/(1-gammastar))*exp((nu+gammastar*ahat*Gn)/(1-gammastar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen pi0 = (1-gammastar)*gammastar^(gammastar/(1-gammastar))*exp(nu/(1-gammastar))*Eee^(1/(1-gammastar))
+(179 missing values generated)
+
+. gen lnpi0 = ln(pi0)
+(179 missing values generated)
+
+. 
+. *************** some automated tests
+. * lnpi0 should be collinear with nu
+. areg lnpi0 nu, a(nace2year)
+
+Linear regression, absorbing indicators           Number of obs   =     127293
+                                                  F(   1, 127030) =          .
+                                                  Prob > F        =          .
+                                                  R-squared       =     1.0000
+                                                  Adj R-squared   =     1.0000
+                                                  Root MSE        =     0.0000
+
+------------------------------------------------------------------------------
+       lnpi0 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          nu |   4.038644          .        .       .            .           .
+       _cons |  -2.067702          .        .       .            .           .
+-------------+----------------------------------------------------------------
+   nace2year |    F(261, 127030) =          .       .         (262 categories)
+
+. assert e(r2)>0.9999
+
+. * nu should have values whenever its components have
+. count if !missing(PlnQ,PlnM,epsilonstar)
+127293
+
+. scalar n1 = r(N)
+
+. count if !missing(nu)
+127293
+
+. assert n1 == r(N)
+
+. * G(0)=0
+. su Gn if Ni==0
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+          Gn |     78273           0           0          0          0
+
+. assert r(mean)==0
+
+. * each Ni has a G(Ni)
+. gen byte noGn = missing(Gn) & !missing(Ni)
+
+. su noGn
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+        noGn |    127472           0           0          0          0
+
+. assert r(max)==0
+
+. drop noGn
+
+. * each IAPgroup has a separate ahat
+. tab IAPgroup
+
+ group(egy) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    127,472      100.00      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. scalar n1 = r(r)
+
+. tab ahat
+
+       ahat |      Freq.     Percent        Cum.
+------------+-----------------------------------
+   .3267903 |    127,472      100.00      100.00
+------------+-----------------------------------
+      Total |    127,472      100.00
+
+. assert n1 == r(r)
+
+. 
+. set more on
+
+. 
+. 
+end of do-file
+
+. 
+. tab year afterforeign [aw=Psales]
+
+           |     afterforeign
+      year |         0          1 |     Total
+-----------+----------------------+----------
+      1992 | 4,554.592  1,201.133 | 5,755.726 
+      1993 |4,522.6338  2,298.656 |  6,821.29 
+      1994 | 4,163.022  2,918.266 | 7,081.288 
+      1995 | 4,616.614  3,598.193 | 8,214.807 
+      1996 | 4,222.064  3,955.195 | 8,177.258 
+      1997 | 3,371.963  6,489.874 | 9,861.837 
+      1998 | 3,423.354  7,457.236 | 10,880.59 
+      1999 | 3,273.891  9,216.736 | 12,490.63 
+      2000 | 3,522.022  10,519.34 | 14,041.36 
+      2001 |3,489.7961  10,036.24 | 13,526.04 
+      2002 |3,645.6141  9,781.972 | 13,427.59 
+      2003 | 3,471.126  13,722.46 | 17,193.59 
+-----------+----------------------+----------
+     Total | 46,276.69  81,195.31 |   127,472 
+
+
+. 
+. codebook id
+
+--------------------------------------------------------------------------------------------------------------------------
+id                                                                                                             (unlabeled)
+--------------------------------------------------------------------------------------------------------------------------
+
+                  type:  numeric (long)
+
+                 range:  [1000051,5211900]            units:  1
+         unique values:  26593                    missing .:  0/127472
+
+                  mean:   1.2e+06
+              std. dev:    262501
+
+           percentiles:        10%       25%       50%       75%       90%
+                           1.0e+06   1.1e+06   1.1e+06   1.2e+06   1.2e+06
+
+. 
+. scalar exchange_rate = 1/210.51*1e+3
+
+. * express nominal variables in thousand 1998 dollars
+. replace sales = sales*exchange_rate
+(127472 real changes made)
+
+. gen KperL = exp(lnK-lnL)*exchange_rate
+
+. gen QperL = exp(lnQ-lnL)*exchange_rate
+
+. gen MperQ = nominal_intermediate/nominal_revenue
+
+. gen lnYL = ln((nominal_revenue-nominal_intermediate)*exchange_rate/price_2digit*100)-lnL
+(8521 missing values generated)
+
+. 
+. gen byte state = stateowned>0.33*commonstock & !missing(stateowned)
+
+. 
+. tab afterforeign proc_s
+
+afterforei | proc_sales
+        gn |         0 |     Total
+-----------+-----------+----------
+         0 |   103,929 |   103,929 
+         1 |    23,543 |    23,543 
+-----------+-----------+----------
+     Total |   127,472 |   127,472 
+
+
+. 
+. codebook id
+
+--------------------------------------------------------------------------------------------------------------------------
+id                                                                                                             (unlabeled)
+--------------------------------------------------------------------------------------------------------------------------
+
+                  type:  numeric (long)
+
+                 range:  [1000051,5211900]            units:  1
+         unique values:  26593                    missing .:  0/127472
+
+                  mean:   1.2e+06
+              std. dev:    262501
+
+           percentiles:        10%       25%       50%       75%       90%
+                           1.0e+06   1.1e+06   1.1e+06   1.2e+06   1.2e+06
+
+. codebook id if !importer
+
+--------------------------------------------------------------------------------------------------------------------------
+id                                                                                                             (unlabeled)
+--------------------------------------------------------------------------------------------------------------------------
+
+                  type:  numeric (long)
+
+                 range:  [1000052,5211900]            units:  1
+         unique values:  20921                    missing .:  0/78273
+
+                  mean:   1.2e+06
+              std. dev:    270976
+
+           percentiles:        10%       25%       50%       75%       90%
+                           1.0e+06   1.1e+06   1.1e+06   1.2e+06   1.2e+06
+
+. codebook id if importer
+
+--------------------------------------------------------------------------------------------------------------------------
+id                                                                                                             (unlabeled)
+--------------------------------------------------------------------------------------------------------------------------
+
+                  type:  numeric (long)
+
+                 range:  [1000051,4871133]            units:  1
+         unique values:  13341                    missing .:  0/49199
+
+                  mean:   1.1e+06
+              std. dev:    248007
+
+           percentiles:        10%       25%       50%       75%       90%
+                           1.0e+06   1.1e+06   1.1e+06   1.1e+06   1.2e+06
+
+. 
+. su empl sales KperL QperL MperQ exporter expsh importer impsh Ni afterforeign state
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+  employment |    127472    48.85292     266.575          1      22851
+       sales |    127472    2870.672    47151.29   .0047504    4686447
+       KperL |    127472    13.74577    72.37105   .0003937   9258.204
+       QperL |    127472    51.31796    170.7653   .0006809   21478.96
+       MperQ |    127472    .8191962    9.229679   .0001619   2803.333
+-------------+--------------------------------------------------------
+    exporter |    127472     .353207    .4779682          0          1
+    expshare |    127472    .1035154    .2489332          0   1.595749
+    importer |    127472    .3859593    .4868229          0          1
+       impsh |    127471    .1042219    1.804243          0   604.0552
+          Ni |    127472    4.716322    13.84648          0        366
+-------------+--------------------------------------------------------
+afterforeign |    127472    .1846915    .3880487          0          1
+       state |    127472    .0270255    .1621585          0          1
+
+. su empl sales KperL QperL MperQ exporter expsh importer impsh Ni afterforeign state if !importer
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+  employment |     78273    17.41641    102.8322          1      22851
+       sales |     78273    420.0658    2429.963   .0047504   464538.3
+       KperL |     78273    11.22203    77.14125   .0004692   9258.204
+       QperL |     78273    36.99431    132.5282   .0006809   21478.96
+       MperQ |     78273    .7902455    3.710993   .0001619   624.7273
+-------------+--------------------------------------------------------
+    exporter |     78273    .1503456    .3574121          0          1
+    expshare |     78273    .0439993    .1684306          0   1.595749
+    importer |     78273           0           0          0          0
+       impsh |     78273           0           0          0          0
+          Ni |     78273           0           0          0          0
+-------------+--------------------------------------------------------
+afterforeign |     78273    .0868371     .281598          0          1
+       state |     78273    .0207351    .1424971          0          1
+
+. su empl sales KperL QperL MperQ exporter expsh importer impsh Ni afterforeign state if importer
+
+    Variable |       Obs        Mean    Std. Dev.       Min        Max
+-------------+--------------------------------------------------------
+  employment |     49199    98.86672    404.0093          1      22091
+       sales |     49199    6769.458    75671.86   .0069918    4686447
+       KperL |     49199    17.76091     63.8494   .0003937   4198.041
+       QperL |     49199    74.10614    216.2548   .0013984   15867.69
+       MperQ |     49199    .8652552     14.0998   .0009831   2803.333
+-------------+--------------------------------------------------------
+    exporter |     49199    .6759487     .468024          0          1
+    expshare |     49199    .1982024    .3175251          0   1.595749
+    importer |     49199           1           0          1          1
+       impsh |     49198    .2700367    2.896503          0   604.0552
+          Ni |     49199    12.21974    20.12619          1        366
+-------------+--------------------------------------------------------
+afterforeign |     49199    .3403728    .4738393          0          1
+       state |     49199    .0370333    .1888453          0          1
+
+. 
+. table year afterforeign, c(mean importer)
+
+----------------------------
+          |   afterforeign  
+     year |       0        1
+----------+-----------------
+     1992 | .331978  .740102
+     1993 | .297523  .710398
+     1994 | .283818  .706104
+     1995 | .275349  .683634
+     1996 |  .25714  .678497
+     1997 | .250432  .681241
+     1998 | .247621  .680471
+     1999 | .246079  .679309
+     2000 | .372113  .713719
+     2001 | .401124  .753053
+     2002 | .418033  .750111
+     2003 | .426665  .764109
+----------------------------
+
+. table year afterforeign, c(mean impsh)
+
+------------------------------
+          |    afterforeign   
+     year |        0         1
+----------+-------------------
+     1992 | .1608869  .2988733
+     1993 | .0544163   .379121
+     1994 | .0496911  .2669855
+     1995 | .0485975  .2941823
+     1996 | .0448794  .3005894
+     1997 | .0485821  .2825008
+     1998 | .0548352  .2698565
+     1999 | .0455654  .3061902
+     2000 | .0703346   .296178
+     2001 | .0663696  .2429289
+     2002 | .0707613  .2780482
+     2003 | .0777441  .2839715
+------------------------------
+
+. 
+. /* simple XS regressions */
+. local sample "year==1999"
+
+. local controls "lnL matimporter"
+
+. 
+. 
+. * regressions for |Fact 1
+. reg lnN afterforeign lnL
+
+      Source |       SS       df       MS              Number of obs =  127472
+-------------+------------------------------           F(  2,127469) =34491.18
+       Model |  59314.2846     2  29657.1423           Prob > F      =  0.0000
+    Residual |  109603.841127469  .859847026           R-squared     =  0.3511
+-------------+------------------------------           Adj R-squared =  0.3511
+       Total |  168918.125127471  1.32514945           Root MSE      =  .92728
+
+------------------------------------------------------------------------------
+         lnN |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+afterforeign |   1.055772   .0067494   156.43   0.000     1.042543       1.069
+         lnL |   .3200855   .0016932   189.04   0.000     .3167668    .3234042
+       _cons |  -.2009788    .004773   -42.11   0.000    -.2103337   -.1916239
+------------------------------------------------------------------------------
+
+. 
+. di exp(_b[afterforeign])-1
+1.8741922
+
+. di exp(_b[lnL]*ln(2))-1
+.24840454
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Volumes/Home/Dropbox/projects/published/imported-inputs-and-productivity-replication/code/../doc/descriptive
+> s.log
+  log type:  text
+ closed on:  18 Sep 2015, 15:34:56
+--------------------------------------------------------------------------------------------------------------------------
